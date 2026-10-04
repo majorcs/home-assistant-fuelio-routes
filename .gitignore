@@ -1,0 +1,22 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+
+# Real GPS tracks (private locations) - never commit
+sample-routes/
+
+# Local AI / architecture docs - never commit
+docs/architecture.md
+docs/current-state.md
+
+.env
+*.token
+*.key
+
+# Local Home Assistant test instance (holds tokens and downloaded routes)
+.venv-e2e-ha/
+.e2e-homeassistant/

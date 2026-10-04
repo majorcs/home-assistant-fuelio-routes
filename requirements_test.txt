@@ -1,0 +1,4 @@
+defusedxml>=0.7.1
+pytest-homeassistant-custom-component
+pytest-cov
+ruff
