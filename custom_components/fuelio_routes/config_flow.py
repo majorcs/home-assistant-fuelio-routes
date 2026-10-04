@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Mapping
 import logging
 import re
@@ -67,6 +68,7 @@ class FuelioRoutesFlowHandler(
         self._client: DriveClient | None = None
         self._path: list[DriveFile] = [DriveFile(id=DRIVE_ROOT_ID, name=ROOT_NAME)]
         self._folder_names: dict[str, str] = {}
+        self._creation: asyncio.Task[ConfigFlowResult] | None = None
 
     @property
     def logger(self) -> logging.Logger:
@@ -81,6 +83,21 @@ class FuelioRoutesFlowHandler(
             "access_type": "offline",
             "prompt": "consent",
         }
+
+    async def async_step_creation(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Exchange Google's one-time code for a token only once.
+
+        Coming back through the My Home Assistant redirect, this step was seen to
+        run twice at the same moment. Google rejects the second use of the code,
+        which aborted the flow while the user was already browsing folders.
+        """
+        if self._creation is None:
+            self._creation = self.hass.async_create_task(
+                super().async_step_creation(user_input), eager_start=False
+            )
+        return await asyncio.shield(self._creation)
 
     async def async_step_reauth(
         self, entry_data: Mapping[str, Any]

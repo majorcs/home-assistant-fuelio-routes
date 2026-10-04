@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 from homeassistant.config_entries import SOURCE_USER
@@ -11,7 +12,10 @@ from homeassistant.helpers import config_entry_oauth2_flow
 from homeassistant.setup import async_setup_component
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
-from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
+from pytest_homeassistant_custom_component.test_util.aiohttp import (
+    AiohttpClientMocker,
+    AiohttpClientMockResponse,
+)
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
 from custom_components.fuelio_routes.api import DriveError, DriveFile
@@ -159,6 +163,61 @@ async def test_browse_to_folder(
     assert result["result"].unique_id == "fuelio"
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(result["result"].runtime_data.trips) == 1
+
+
+async def test_sign_in_completed_twice_at_once(
+    hass: HomeAssistant,
+    hass_client_no_auth: ClientSessionGenerator,
+    aioclient_mock: AiohttpClientMocker,
+    drive: FakeDrive,
+) -> None:
+    """A duplicate continuation after sign-in must not reuse the one-time code."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    flow_id = result["flow_id"]
+    state = config_entry_oauth2_flow._encode_jwt(
+        hass, {"flow_id": flow_id, "redirect_uri": REDIRECT_URI}
+    )
+    client = await hass_client_no_auth()
+    response = await client.get(f"/auth/external/callback?code=abcd&state={state}")
+    assert response.status == 200
+    used_codes: set[str] = set()
+
+    async def exchange_code(method, url, data):
+        # Like Google: slow enough for calls to overlap, and every code works once.
+        await asyncio.sleep(0.05)
+        code = data["code"]
+        if code in used_codes:
+            return AiohttpClientMockResponse(
+                method, url, status=400, json={"error": "invalid_grant"}
+            )
+        used_codes.add(code)
+        return AiohttpClientMockResponse(
+            method,
+            url,
+            json={
+                "refresh_token": "new-refresh",
+                "access_token": "new-access",
+                "token_type": "Bearer",
+                "expires_in": 3600,
+            },
+        )
+
+    aioclient_mock.post(TOKEN_URL, side_effect=exchange_code)
+
+    first, second = await asyncio.gather(
+        hass.config_entries.flow.async_configure(flow_id),
+        hass.config_entries.flow.async_configure(flow_id),
+    )
+
+    assert aioclient_mock.call_count == 1
+    assert first["step_id"] == second["step_id"] == "folder"
+    result = await hass.config_entries.flow.async_configure(
+        flow_id, {"folder": CHOICE_USE_CURRENT}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    await hass.async_block_till_done(wait_background_tasks=True)
 
 
 async def test_paste_folder(
