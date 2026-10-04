@@ -3,12 +3,18 @@
   "name": "Fuelio Routes",
   "codeowners": ["@majorcs"],
   "config_flow": true,
-  "dependencies": ["application_credentials", "frontend", "http", "websocket_api"],
+  "dependencies": [
+    "application_credentials",
+    "frontend",
+    "http",
+    "lovelace",
+    "websocket_api"
+  ],
   "documentation": "https://github.com/majorcs/home-assistant-fuelio-routes",
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/majorcs/home-assistant-fuelio-routes/issues",
   "loggers": ["custom_components.fuelio_routes"],
   "requirements": ["defusedxml>=0.7.1"],
-  "version": "2026.10.4.2"
+  "version": "2026.10.4.3"
 }

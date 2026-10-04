@@ -2,11 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from aiohttp import ClientError, ClientResponseError
-from homeassistant.components.frontend import add_extra_js_url
-from homeassistant.components.http import StaticPathConfig
 from homeassistant.const import CONF_ACCESS_TOKEN, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
@@ -17,10 +13,10 @@ from homeassistant.helpers.config_entry_oauth2_flow import (
     async_get_config_entry_implementation,
 )
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import async_get_integration
 
 from .api import DriveAuthError, DriveClient, DriveError
-from .const import CARD_FILENAME, DOMAIN, FRONTEND_URL_BASE
+from .card import async_register_card, async_unregister_card
+from .const import DOMAIN
 from .coordinator import (
     FuelioRoutesConfigEntry,
     FuelioRoutesCoordinator,
@@ -35,20 +31,7 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Serve the bundled Lovelace card and register the websocket commands."""
-    integration = await async_get_integration(hass, DOMAIN)
-    frontend_dir = Path(__file__).parent / "frontend"
-    await hass.http.async_register_static_paths(
-        [StaticPathConfig(FRONTEND_URL_BASE, str(frontend_dir), cache_headers=False)]
-    )
-    # The file's modification time is part of the URL so that browsers never keep
-    # running a cached copy of the card after it has changed.
-    modified = await hass.async_add_executor_job(
-        lambda: int((frontend_dir / CARD_FILENAME).stat().st_mtime)
-    )
-    add_extra_js_url(
-        hass,
-        f"{FRONTEND_URL_BASE}/{CARD_FILENAME}?v={integration.version}-{modified}",
-    )
+    await async_register_card(hass)
     async_register_commands(hass)
     return True
 
@@ -103,5 +86,12 @@ async def async_unload_entry(
 async def async_remove_entry(
     hass: HomeAssistant, entry: FuelioRoutesConfigEntry
 ) -> None:
-    """Delete the cached routes when the config entry is removed."""
+    """Delete the cached routes; drop the card's resource with the last entry."""
     await async_remove_cache(hass, entry.entry_id)
+    others = [
+        other
+        for other in hass.config_entries.async_entries(DOMAIN)
+        if other.entry_id != entry.entry_id
+    ]
+    if not others:
+        await async_unregister_card(hass)

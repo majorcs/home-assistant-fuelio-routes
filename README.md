@@ -67,7 +67,11 @@ responsive, and nothing waits for it.
 
 ## Card
 
-The card is registered automatically; add it from the card picker
+The card is registered automatically as a dashboard resource (visible under
+**Settings → Dashboards → Resources**; it is removed again with the
+integration). If your resources are managed in YAML, add
+`/fuelio_routes/fuelio-routes-card.js` as a `module` resource yourself for the
+card to work in the companion app. Add the card from the card picker
 ("Fuelio Routes") or in YAML:
 
 ```yaml
