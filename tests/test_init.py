@@ -10,7 +10,6 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 from aiohttp import ClientError, ClientResponseError
-from homeassistant.components.frontend import DATA_EXTRA_MODULE_URL
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
@@ -106,10 +105,6 @@ async def test_setup_downloads_and_indexes(
     assert coordinator.days() == {"2026-10-01": 2, "2026-10-02": 1}
     assert coordinator.trip_ids_on(date(2026, 10, 1)) == [str(TRIP_A), str(TRIP_B)]
     assert coordinator.latest_trip["id"] == str(TRIP_C)
-
-    assert f"/{DOMAIN}/{CARD_FILENAME}?v=" in next(
-        iter(hass.data[DATA_EXTRA_MODULE_URL])
-    )
 
 
 async def test_resync_only_fetches_new_and_changed_files(

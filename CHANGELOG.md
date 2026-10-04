@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026.10.4.3
+
+### Fixed
+- The card showed "Configuration error" in the companion app: the app can keep showing a page cached before the integration was installed, which never loads the card. The card is now registered as a dashboard resource, which dashboards load every time.
+
+### Changed
+- The integration adds one entry for the card under Settings → Dashboards → Resources, keeps it up to date and removes it when the integration is removed. With resources managed in YAML the card is loaded as before; add `/fuelio_routes/fuelio-routes-card.js` as a module resource there.
+
 ## 2026.10.4.2
 
 ### Fixed
