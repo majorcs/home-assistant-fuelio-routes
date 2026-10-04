@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026.10.4.2
+
+### Fixed
+- Signing in through the My Home Assistant redirect could end with "Invalid flow specified": the sign-in step ran twice at once and the second, rejected use of Google's one-time code aborted the setup.
+
 ## 2026.10.4.1
 
 ### Added
